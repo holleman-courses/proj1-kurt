@@ -172,3 +172,6 @@ cython_debug/
 
 # Arduino / Platform IO
 **/.pio
+
+/training/dataset/
+/training/processed_dataset/
