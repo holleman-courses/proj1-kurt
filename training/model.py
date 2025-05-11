@@ -132,7 +132,7 @@ def train_model(model, train_gen, val_gen, class_weight):
         validation_data=val_gen,
         class_weight=class_weight,
     )
-    model.save("open_hand_model.h5")
+    #model.save("open_hand_model.h5")
     return model
 
 
