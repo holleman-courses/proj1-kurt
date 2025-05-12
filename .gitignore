@@ -175,3 +175,4 @@ cython_debug/
 
 /training/dataset/
 /training/processed_dataset/
+/training/test_set

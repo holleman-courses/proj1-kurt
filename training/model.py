@@ -4,6 +4,7 @@ from tensorflow import keras
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 from tensorflow.keras import optimizers
+import matplotlib.pyplot as plt
 
 
 # ─────────────────────────────────────────────────────────────
@@ -132,8 +133,8 @@ def train_model(model, train_gen, val_gen, class_weight):
         validation_data=val_gen,
         class_weight=class_weight,
     )
-    #model.save("open_hand_model.h5")
-    return model
+    #model.save("open_hand_model.h5") #COMMENTED OUT BECAUSE I ALREADY HAVE THE MODEL
+    return model, history
 
 
 '''
@@ -194,17 +195,70 @@ if __name__ == "__main__":
 
     model = build_model()
     model.summary()
-    model = train_model(model, train_gen, val_gen, class_weight)
+    model, history = train_model(model, train_gen, val_gen, class_weight)
 
-    # grab one validation batch
-    x_val, y_val = next(val_gen)
-    # raw model outputs
-    probs = model.predict(x_val).flatten()
-    print("First 10 probs:", np.round(probs[:10], 3))
-    print("First 10 true labels:", y_val[:10])
-    # how many of this batch it calls “hand” vs “non_hands”
-    print("Predicted hands:", np.sum(probs > 0.5),
-        "  non_hands:", np.sum(probs <= 0.5))
+    
+    plt.figure(figsize=(8, 5))
+    plt.plot(history.history["accuracy"],     label="Train accuracy")
+    plt.plot(history.history["val_accuracy"], label="Val accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.title("Training vs Validation Accuracy")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+    test_datagen = ImageDataGenerator(rescale=1./255)
+    test_gen = test_datagen.flow_from_directory(
+        r"C:\Users\User\OneDrive\Documents\IOT_ML\proj1-khayes39\proj1-kurt\training\test_set",
+        target_size=IMG_SIZE,
+        color_mode="grayscale",
+        batch_size=BATCH_SIZE,
+        class_mode="binary",
+        shuffle=False                           # keep order for metrics
+    )
+
+
+    # after training:
+    test_loss, test_acc = model.evaluate(test_gen)
+    print(f"\nTest accuracy: {test_acc:.3f},  loss: {test_loss:.4f}")
+
+
+
+    # 1) Get model probabilities on the entire test set (no shuffling!)
+    probs_test = model.predict(test_gen, verbose=0).flatten()
+    y_true     = test_gen.classes                         # ground‑truth labels
+    y_pred     = (probs_test > 0.5).astype(np.uint8)      # threshold @ 0.5
+
+    # 2) Confusion‑matrix elements
+    TP = np.sum((y_true == 1) & (y_pred == 1))
+    TN = np.sum((y_true == 0) & (y_pred == 0))
+    FP = np.sum((y_true == 0) & (y_pred == 1))
+    FN = np.sum((y_true == 1) & (y_pred == 0))
+
+    # 3) Rates
+    false_rejection_rate = FN / (TP + FN) if (TP + FN) else 0
+    false_positive_rate  = FP / (FP + TN) if (FP + TN) else 0
+
+    # 4) Print summary
+    print("\n── Confusion‑matrix summary ──")
+    print(f"TP: {TP:5d}   FP: {FP:5d}")
+    print(f"FN: {FN:5d}   TN: {TN:5d}")
+    print(f"False Rejection Rate (FRR): {false_rejection_rate:.4f}")
+    print(f"False Positive  Rate (FPR): {false_positive_rate :.4f}")
+    # # grab one validation batch
+    # x_val, y_val = next(val_gen)
+    # # raw model outputs
+    # probs = model.predict(x_val).flatten()
+    # print("First 10 probs:", np.round(probs[:10], 3))
+    # print("First 10 true labels:", y_val[:10])
+    # # how many of this batch it calls “hand” vs “non_hands”
+    # print("Predicted hands:", np.sum(probs > 0.5),
+    #     "  non_hands:", np.sum(probs <= 0.5))
 
 
 

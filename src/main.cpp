@@ -123,9 +123,15 @@ const uint16_t CROP_W = 96,  CROP_H = 96;  // final frame size
 uint8_t fullFrame[SRC_W * SRC_H];          // 25 344  B
 uint8_t cropped[CROP_W * CROP_H];          // 9 216   B
 
+unsigned long t0;
+unsigned long t1;
+unsigned long t2;
+unsigned long t3;
+unsigned long t_total;   // microseconds from t0 to t3
+unsigned long t_infer;   // microseconds from t2 to t3
 
 void loop() {
-
+  t0 = micros();  // start time
   //testing something here
   
   Camera.readFrame(image);
@@ -160,7 +166,7 @@ void loop() {
   
   //done testing
 
-
+  t1 = micros();  // end of camera read
   
 
   
@@ -198,13 +204,13 @@ void loop() {
   }
 
 
-  //testing something here
-  int8_t min_q =  127, max_q = -128;
-  for (int i = 0; i < 96*96; i++) {
-    int8_t v = input_tensor->data.int8[i];
-    min_q = v < min_q ? v : min_q;
-    max_q = v > max_q ? v : max_q;
-  }
+  // //testing something here
+  // int8_t min_q =  127, max_q = -128;
+  // for (int i = 0; i < 96*96; i++) {
+  //   int8_t v = input_tensor->data.int8[i];
+  //   min_q = v < min_q ? v : min_q;
+  //   max_q = v > max_q ? v : max_q;
+  // }
   // Serial.print("Input Q range: [");
   // Serial.print(min_q);
   // Serial.print(", ");
@@ -212,7 +218,7 @@ void loop() {
   // Serial.println("]");
 
 
-
+  t2 = micros();  // end of camera read
 
   // 5) Invoke the model
   interpreter->Invoke();
@@ -231,7 +237,16 @@ void loop() {
 
   if (confidence < 0.46) {
     Serial.println("Hand detected! Confidence: " + String((1-confidence) * 100.0, 2) + "%");
+  } else {
+    Serial.println("No hand detected. Confidence: " + String(confidence * 100.0, 2) + "%");
   }
+  t3 = micros();  // end of inference
+  t_total = t3 - t0;  // total time for the loop
+  t_infer = t3 - t2;  // inference time only
+  Serial.print("Inference time: ");
+  Serial.print(t_infer); Serial.print(" us, ");
+  Serial.print("Total time: ");
+  Serial.print(t_total); Serial.println(" us");
 
 
   // (optional) Print the first few quantized inputs too:
